@@ -66,4 +66,35 @@ const userSchema = new mongoose.Schema({
 }, {
     timestamps: true,
 });
-export const User = mongoose.model('User',userSchema)
+
+userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ followersCount: -1 });
+
+userSchema.virtual('posts', {
+    ref: 'Post',
+    localField: '_id',
+    foreignField: 'author'
+});
+
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) return next();
+
+    this.password = await bcrypt.hash(this.password, 12);
+    next();
+});
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
+    if (this.passwordChangedAt) {
+        const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        return JWTTimestamp < changedTimestamp;
+    }
+    return false;
+};
+
+export const User = mongoose.model('User', userSchema);

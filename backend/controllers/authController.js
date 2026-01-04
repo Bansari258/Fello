@@ -5,12 +5,12 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 
 export const registerUser = catchAsync(async (req, res, next) => {
     const { email, username, password, fullName } = req.body;
-    const existingUser = await User.find({ $or: [{ email }, { username }] }).lean();
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] }).lean();
     if (existingUser) {
         const field = existingUser.email === email ? 'email' : 'username';
         return next(new AppError(`User with this ${field} already exists`, 400));
     }
-    const user = await User.create({ email, username, password, fullName })
+    const user = await User.create({ email, username, password, fullName });
 
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
@@ -20,14 +20,16 @@ export const registerUser = catchAsync(async (req, res, next) => {
     res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 15 * 60 * 1000 // 15 minutes
     });
 
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -64,14 +66,16 @@ export const loginUser = catchAsync(async (req, res, next) => {
     res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 15 * 60 * 1000 // 15 minutes
     });
 
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     res.status(200).json({
@@ -95,13 +99,14 @@ export const loginUser = catchAsync(async (req, res, next) => {
 })
 
 export const refreshToken = catchAsync(async (req, res, next) => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
+    // accept refresh token from request body or httpOnly cookie
+    const token = req.body?.refreshToken || req.cookies?.refreshToken;
+    if (!token) {
         return next(new AppError('Refresh token is required', 400));
     }
-    const decoded = verifyRefreshToken(refreshToken);
+    const decoded = verifyRefreshToken(token);
     const user = await User.findById(decoded.id);
-    if (!user || user.refreshToken !== refreshToken) {
+    if (!user || user.refreshToken !== token) {
         return next(new AppError('Invalid refresh token', 401));
     }
     if (!user.isActive) {
@@ -111,7 +116,8 @@ export const refreshToken = catchAsync(async (req, res, next) => {
     res.cookie('accessToken', newAccessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 15 * 60 * 1000 // 15 minutes
     });
     res.status(200).json({
@@ -128,14 +134,16 @@ export const logout = catchAsync(async (req, res, next) => {
     res.cookie('accessToken', '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         expires: new Date(0)
     });
 
     res.cookie('refreshToken', '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/',
         expires: new Date(0)
     });
     res.status(200).json({
@@ -146,6 +154,7 @@ export const logout = catchAsync(async (req, res, next) => {
 
 export const getMe = catchAsync(async (req, res, next) => {
     const user = await User.findById(req.user._id).select('-refreshToken -passwordChangedAt -passwordResetToken -passwordResetExpires');
+
     res.status(200).json({
         status: 'success',
         data: { user }

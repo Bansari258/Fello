@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from 'bcrypt';
 
 const userSchema = new mongoose.Schema({
     username: {
@@ -79,10 +80,10 @@ userSchema.virtual('posts', {
 });
 
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+    if (!this.isModified('password')) return false;
 
     this.password = await bcrypt.hash(this.password, 12);
-    next();
+    
 });
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
@@ -96,5 +97,6 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
     }
     return false;
 };
+const User = mongoose.model('User', userSchema);
 
-export const User = mongoose.model('User', userSchema);
+export default User;

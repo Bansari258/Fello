@@ -1,13 +1,22 @@
-import { AppError } from "../utils/AppError";
-import catchAsync from "../utils/catchAsync";
-import { verifyAccessToken } from "../utils/jwt";
-import User from '../models/userModel'
+import  {AppError}  from "../utils/AppError.js";
+import catchAsync from "../utils/catchAsync.js";
+import { verifyAccessToken } from "../utils/jwt.js";
+import User from '../models/userModel.js'
 export const protect = catchAsync(async (req, res, next) => {
+    
     const token = req.cookies.accessToken;
     if (!token) {
         return next(new AppError('You are not logged in. Please log in to get access.', 401));
     }
-    const decoded = verifyAccessToken(token);
+    let decoded;
+    try {
+        decoded = verifyAccessToken(token);
+    } catch (err) {
+        if (err && err.name === 'TokenExpiredError') {
+            return res.status(401).json({ status: 'fail', message: 'Access token expired' });
+        }
+        return res.status(401).json({ status: 'fail', message: 'Invalid token' });
+    }
     const currentUser = await User.findById(decoded.id).select('+password');
     if (!currentUser) {
         return next(new AppError('The user belonging to this token no longer exists.', 401));

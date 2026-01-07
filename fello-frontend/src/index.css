@@ -1,20 +1,29 @@
-/* src/styles/custom.css */
-
 :root {
-  --primary: #FF385C;
-  --primary-dark: #E31C5F;
-  --primary-light: #FF6B86;
-  --secondary: #6C757D;
-  --success: #00A699;
-  --bg-light: #F7F7F7;
+  --primary: #9333ea;
+  --primary-dark: #7e22ce;
+  --secondary: #f59e0b;
+  --bg-light: #f8f9fa;
+  --bg-dark: #1a1a1a;
+  --text-dark: #212529;
+  --text-muted: #6c757d;
+  --border: #dee2e6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-light);
 }
 
-/* Buttons */
 .btn-primary {
   background-color: var(--primary) !important;
   border-color: var(--primary) !important;
@@ -25,114 +34,92 @@ body {
   border-color: var(--primary-dark) !important;
 }
 
-.btn-outline-primary {
-  color: var(--primary) !important;
-  border-color: var(--primary) !important;
-}
-
-.btn-outline-primary:hover {
-  background-color: var(--primary) !important;
-  border-color: var(--primary) !important;
-  color: white !important;
-}
-
-/* Links */
 .text-primary {
   color: var(--primary) !important;
 }
 
-a {
-  color: var(--primary);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--primary-dark);
-}
-
-/* Forms */
-.form-control:focus {
-  border-color: var(--primary-light);
-  box-shadow: 0 0 0 0.2rem rgba(255, 56, 92, 0.25);
-}
-
-.form-check-input:checked {
-  background-color: var(--primary);
-  border-color: var(--primary);
-}
-
-/* Navbar */
-.navbar-brand {
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--primary) !important;
-}
-
-.nav-link {
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.nav-link:hover {
-  color: var(--primary) !important;
-}
-
-/* Cards */
 .card {
   border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.card:hover {
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.2rem rgba(147, 51, 234, 0.25);
+}
+
+.navbar {
+  background-color: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.post-card {
+  transition: transform 0.2s;
+}
+
+.post-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Auth Pages */
-.auth-container {
-  min-height: 100vh;
+.avatar {
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.cover-photo {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar {
+  position: sticky;
+  top: 80px;
+  height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-light);
 }
 
-.auth-card {
-  border-radius: 20px;
-  overflow: hidden;
-  border: none !important;
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
 }
 
-.auth-logo {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 0.5rem;
-}
-
-/* Loading Spinner */
-.spinner-border-primary {
-  color: var(--primary);
-}
-
-/* Alert */
-.alert-primary {
-  background-color: rgba(255, 56, 92, 0.1);
-  border-color: var(--primary-light);
-  color: var(--primary-dark);
-}
-
-/* Utilities */
-.bg-primary {
-  background-color: var(--primary) !important;
-}
-
-.bg-light-gray {
-  background-color: var(--bg-light);
-}
-
-.shadow-custom {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+@media (max-width: 768px) {
+  .sidebar {
+    position: static;
+    height: auto;
+  }
 }

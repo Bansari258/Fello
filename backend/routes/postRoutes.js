@@ -1,24 +1,31 @@
-import express from 'express'
+import express from 'express';
+import {
+    createPost,
+    getPosts,
+    getDiscoverPosts,
+    getPost,
+    updatePost,
+    deletePost,
+    toggleLike,
+    addComment,
+    getComments
+} from '../controllers/postController.js';
+import { protect } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import { postValidation, commentValidation } from '../utils/validators.js';
+
 const router = express.Router();
 
-import { createPost, deletePost, getPost, updatePost } from '../controllers/postController.js';
-import { optionalAuth, protect } from '../middleware/auth.js';
-import { mongoIdValidation, postValidation } from '../utils/validators.js';
+router.use(protect);
 
-router
-    .route('/')
-    .post(protect, postValidation, createPost);
+router.post('/', postValidation, validate, createPost);
+router.get('/', getPosts);
+router.get('/discover', getDiscoverPosts);
+router.get('/:id', getPost);
+router.patch('/:id', postValidation, validate, updatePost);
+router.delete('/:id', deletePost);
+router.post('/:id/like', toggleLike);
+router.post('/:id/comment', commentValidation, validate, addComment);
+router.get('/:id/comments', getComments);
 
-router
-    .route('/:id')
-    .get(optionalAuth, mongoIdValidation, getPost)
-    .patch(protect, mongoIdValidation, postValidation, updatePost)
-    .delete(protect, mongoIdValidation, deletePost);
-
-// router.post('/:id/like', protect, mongoIdValidation, validate, toggleLike);
-
-// router
-//     .route('/:id/comments')
-//     .get(mongoIdValidation, paginationValidation, validate, getPostComments)
-//     .post(protect, mongoIdValidation, commentValidation, validate, addComment);
 export default router;

@@ -1,97 +1,72 @@
-// src/App.jsx - UPDATED
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getCurrentUser } from './redux/slices/authSlice';
-
-// Components
-import Navbar from './components/layout/Navbar';
-import PrivateRoute from './components/layout/PrivateRoute';
-import Loading from './components/Loading';
-
-// Auth Pages
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-
-// Main Pages
-import HomePage from './pages/HomePage';
-import DiscoverPage from './pages/DiscoverPage';
-import SearchPage from './pages/SearchPage';
-import NotificationsPage from './pages/NotificationsPage';
-import ProfilePage from './pages/ProfilePage';
-import NotFoundPage from './pages/NotFoundPage';
+import { ToastContainer } from 'react-toastify';
+import { getCurrentUser } from './store/slices/authSlice';
+import Navbar from './components/Navbar';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Home from './pages/Home';
+import Discover from './pages/Discover';
+import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
+import Notifications from './pages/Notifications';
+import PrivateRoute from './components/PrivateRoute';
+import { Spinner } from 'react-bootstrap';
 
 function App() {
   const dispatch = useDispatch();
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const location = useLocation();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Try to fetch current user on app load
-    dispatch(getCurrentUser());
-  }, [dispatch]);
+    const publicPaths = ['/login', '/register'];
+    
+    if (publicPaths.includes(location.pathname)) {
+      setLoading(false);
+      return;
+    }
+
+    const checkAuth = async () => {
+      try {
+        await dispatch(getCurrentUser()).unwrap();
+      } catch (error) {
+        console.log('Not authenticated:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, [dispatch, location.pathname]);
 
   if (loading) {
-    return <Loading />;
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+        <Spinner animation="border" variant="primary" />
+      </div>
+    );
   }
 
   return (
     <>
       {isAuthenticated && <Navbar />}
+      <ToastContainer position="top-right" autoClose={3000} />
+      
       <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/" /> : <Login />}
-        />
-        <Route
-          path="/register"
-          element={isAuthenticated ? <Navigate to="/" /> : <Register />}
-        />
-
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <HomePage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/discover"
-          element={
-            <PrivateRoute>
-              <DiscoverPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <PrivateRoute>
-              <SearchPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <PrivateRoute>
-              <NotificationsPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/profile/:userId"
-          element={
-            <PrivateRoute>
-              <ProfilePage />
-            </PrivateRoute>
-          }
-        />
-
-        {/* 404 */}
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
+        <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
+        
+        <Route element={<PrivateRoute />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/discover" element={<Discover />} />
+          <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/profile/edit" element={<EditProfile />} />
+          <Route path="/notifications" element={<Notifications />} />
+        </Route>
+        
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </>
   );

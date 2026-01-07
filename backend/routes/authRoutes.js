@@ -1,15 +1,16 @@
-import express from 'express'
+import express from 'express';
+import { register, login, refreshToken, logout, getMe } from '../controllers/authController.js';
+import { protect } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
+import { registerValidation, loginValidation } from '../utils/validators.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+
 const router = express.Router();
 
-import { getMe, loginUser, logout, refreshToken, registerUser } from '../controllers/authController.js'
-import { protect } from '../middleware/auth.js'
-import { registerValidation, loginValidation, postValidation } from '../utils/validators.js'
-import { createPost } from '../controllers/postController.js';
-
-router.post('/register', registerValidation, registerUser);
-router.post('/login', loginValidation, loginUser);
+router.post('/register', authLimiter, registerValidation, validate, register);
+router.post('/login', authLimiter, loginValidation, validate, login);
 router.post('/refresh', refreshToken);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
-router.post('/', protect, postValidation, createPost)
+
 export default router;

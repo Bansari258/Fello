@@ -1,162 +1,151 @@
-import { AppError } from "../utils/AppError.js";
-import catchAsync from "../utils/catchAsync.js";
-import User from '../models/userModel.js'
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js'
+import User from '../models/User.js';
+import AppError from '../utils/AppError.js';
+import catchAsync from '../utils/catchAsync.js';
+import { generateAccessToken, generateRefreshToken, setTokenCookies, clearTokenCookies, verifyRefreshToken, setAccessTokenCookie } from '../utils/jwt.js';
 
-export const registerUser = catchAsync(async (req, res, next) => {
-    const { email, username, password, fullName } = req.body;
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] }).lean();
-    if (existingUser) {
-        const field = existingUser.email === email ? 'email' : 'username';
-        return next(new AppError(`User with this ${field} already exists`, 400));
+export const register = catchAsync(async (req, res, next) => {
+  const { email, username, password, fullName } = req.body;
+
+  const existingUser = await User.findOne({
+    $or: [{ email }, { username }]
+  });
+
+  if (existingUser) {
+    return next(new AppError('Email or username already exists', 400));
+  }
+
+  const user = await User.create({
+    email,
+    username,
+    password,
+    fullName
+  });
+
+  const accessToken = generateAccessToken(user._id);
+  const refreshToken = generateRefreshToken(user._id);
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  setTokenCookies(res, accessToken, refreshToken);
+
+
+  res.status(201).json({
+    status: 'success',
+    data: {
+      user: {
+        _id: user._id,
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        avatar: user.avatar,
+        bio: user.bio
+      }
     }
-    const user = await User.create({ email, username, password, fullName });
+  });
+});
 
-    const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+export const login = catchAsync(async (req, res, next) => {
+  const { emailOrUsername, password } = req.body;
 
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
-    res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 15 * 60 * 1000 // 15 minutes
-    });
+  const user = await User.findOne({
+    $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
+  }).select('+password');
 
-    res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+  if (!user || !(await user.comparePassword(password))) {
+    return next(new AppError('Invalid credentials', 401));
+  }
 
-    user.password = undefined;
-    res.status(201).json({
-        status: 'success',
-        data: {
-            user: {
-                id: user._id,
-                email: user.email,
-                username: user.username,
-                fullName: user.fullName,
-                avatar: user.avatar
-            }
-        }
-    });
-})
+  const accessToken = generateAccessToken(user._id);
+  const refreshToken = generateRefreshToken(user._id);
 
-export const loginUser = catchAsync(async (req, res, next) => {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email }).select('+password')
-    if (!user || !(await user.comparePassword(password))) {
-        return next(new AppError('Incorrect email or password', 401));
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  setTokenCookies(res, accessToken, refreshToken);
+
+
+  res.json({
+    status: 'success',
+    data: {
+      user: {
+        _id: user._id,
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        avatar: user.avatar,
+        bio: user.bio
+      }
     }
-    if (!user.isActive) {
-        return next(new AppError('Your account has been deactivated', 403));
-    }
-    const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-    user.refreshToken = refreshToken;
-    user.lastLogin = Date.now();
-    await user.save({ validateBeforeSave: false });
-    user.password = undefined;
-    res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 15 * 60 * 1000 // 15 minutes
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-    res.status(200).json({
-        status: 'success',
-        data: {
-            user: {
-                id: user._id,
-                email: user.email,
-                username: user.username,
-                fullName: user.fullName,
-                avatar: user.avatar,
-                bio: user.bio,
-                followersCount: user.followersCount,
-                followingCount: user.followingCount,
-                postsCount: user.postsCount
-            },
-            accessToken,
-            refreshToken
-        }
-    });
-})
+  });
+});
 
 export const refreshToken = catchAsync(async (req, res, next) => {
-    // accept refresh token from request body or httpOnly cookie
-    const token = req.body?.refreshToken || req.cookies?.refreshToken;
-    if (!token) {
-        return next(new AppError('Refresh token is required', 400));
-    }
-    const decoded = verifyRefreshToken(token);
-    const user = await User.findById(decoded.id);
-    if (!user || user.refreshToken !== token) {
-        return next(new AppError('Invalid refresh token', 401));
-    }
-    if (!user.isActive) {
-        return next(new AppError('Your account has been deactivated', 403));
-    }
-    const newAccessToken = generateAccessToken(user._id);
-    res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 15 * 60 * 1000 // 15 minutes
-    });
-    res.status(200).json({
-        status: 'success',
-        data: {
-            accessToken: newAccessToken
-        }
-    });
-})
+  const oldRefreshToken = req.cookies.refreshToken;
+
+
+  if (!oldRefreshToken) {
+    clearTokenCookies(res);
+    return next(new AppError('Session expired. Please login again.', 401));
+  }
+
+  let decoded;
+  try {
+    decoded = verifyRefreshToken(oldRefreshToken);
+  } catch (error) {
+    clearTokenCookies(res);
+    return next(new AppError('Session expired. Please login again.', 401));
+  }
+
+  const user = await User.findById(decoded.id).select('+refreshToken');
+
+  if (!user) {
+    clearTokenCookies(res);
+    return next(new AppError('User not found', 401));
+  }
+
+  if (user.refreshToken !== oldRefreshToken) {
+    user.refreshToken = undefined;
+    await user.save({ validateBeforeSave: false });
+    clearTokenCookies(res);
+    return next(new AppError('Invalid session. Please login again.', 401));
+  }
+
+  const newAccessToken = generateAccessToken(user._id);
+
+  setAccessTokenCookie(res, newAccessToken);
+
+
+  res.json({
+    status: 'success',
+    message: 'Access token refreshed'
+  });
+});
 
 export const logout = catchAsync(async (req, res, next) => {
-    req.user.refreshToken = undefined;
-    await req.user.save({ validateBeforeSave: false });
-    res.cookie('accessToken', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        expires: new Date(0)
-    });
+  const user = await User.findById(req.user._id);
+  
+  if (user) {
+    user.refreshToken = undefined;
+    await user.save({ validateBeforeSave: false });
+  }
 
-    res.cookie('refreshToken', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        expires: new Date(0)
-    });
-    res.status(200).json({
-        status: 'success',
-        message: 'Logged out successfully'
-    });
-})
+  clearTokenCookies(res);
+
+  res.json({
+    status: 'success',
+    message: 'Logged out successfully'
+  });
+});
 
 export const getMe = catchAsync(async (req, res, next) => {
-    const user = await User.findById(req.user._id).select('-refreshToken -passwordChangedAt -passwordResetToken -passwordResetExpires');
-
-    res.status(200).json({
-        status: 'success',
-        data: { user }
-    });
-})
+  
+  res.json({
+    status: 'success',
+    data: {
+      user: req.user
+    }
+  });
+});

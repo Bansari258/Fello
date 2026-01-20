@@ -18,7 +18,7 @@ export const createPost = catchAsync(async (req, res, next) => {
 
   await User.findByIdAndUpdate(req.user._id, { $inc: { postsCount: 1 } });
 
-  await post.populate('author', 'username fullName avatar');
+  await post.populate('author', 'username fullName');
 
   res.status(201).json({
     status: 'success',
@@ -40,7 +40,7 @@ export const getPosts = catchAsync(async (req, res, next) => {
     author: { $in: following },
     isDeleted: false
   })
-    .populate('author', 'username fullName avatar')
+    .populate('author', 'username fullName')
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit)
@@ -82,7 +82,7 @@ export const getDiscoverPosts = catchAsync(async (req, res, next) => {
   }
 
   const posts = await Post.find({ isDeleted: false })
-    .populate('author', 'username fullName avatar')
+    .populate('author', 'username fullName ')
     .sort(sortOption)
     .limit(limit * 1)
     .skip((page - 1) * limit)
@@ -116,7 +116,7 @@ export const getPost = catchAsync(async (req, res, next) => {
   const post = await Post.findOne({
     _id: req.params.id,
     isDeleted: false
-  }).populate('author', 'username fullName avatar');
+  }).populate('author', 'username fullName ');
 
   if (!post) {
     return next(new AppError('Post not found', 404));
@@ -151,7 +151,7 @@ export const updatePost = catchAsync(async (req, res, next) => {
   post.content = content;
   await post.save();
 
-  await post.populate('author', 'username fullName avatar');
+  await post.populate('author', 'username fullName ');
 
   res.json({
     status: 'success',
@@ -248,7 +248,7 @@ export const addComment = catchAsync(async (req, res, next) => {
 
   await Post.findByIdAndUpdate(post._id, { $inc: { commentsCount: 1 } });
 
-  await comment.populate('author', 'username fullName avatar');
+  await comment.populate('author', 'username fullName ');
 
   if (post.author.toString() !== req.user._id.toString()) {
     await Notification.create({
@@ -273,7 +273,7 @@ export const getComments = catchAsync(async (req, res, next) => {
     post: req.params.id,
     parentComment: null
   })
-    .populate('author', 'username fullName avatar')
+    .populate('author', 'username fullName ')
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit)

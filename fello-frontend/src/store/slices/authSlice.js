@@ -6,10 +6,8 @@ export const register = createAsyncThunk(
     async (userData, { rejectWithValue }) => {
         try {
             const { data } = await api.post('/auth/register', userData);
-            console.log('✅ Register response:', data);
             return data.data.user;
         } catch (error) {
-            console.error('❌ Register error:', error.response?.data);
             return rejectWithValue(error.response?.data?.message || 'Registration failed');
         }
     }
@@ -20,10 +18,8 @@ export const login = createAsyncThunk(
     async (credentials, { rejectWithValue }) => {
         try {
             const { data } = await api.post('/auth/login', credentials);
-            console.log('✅ Login response:', data);
             return data.data.user;
         } catch (error) {
-            console.error('❌ Login error:', error.response?.data);
             return rejectWithValue(error.response?.data?.message || 'Login failed');
         }
     }
@@ -34,9 +30,7 @@ export const logout = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             await api.post('/auth/logout');
-            console.log('✅ Logout successful');
         } catch (error) {
-            console.error('❌ Logout error:', error.response?.data);
             return rejectWithValue(error.response?.data?.message || 'Logout failed');
         }
     }
@@ -47,10 +41,8 @@ export const getCurrentUser = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const { data } = await api.get('/auth/me');
-            console.log('✅ Current user fetched:', data.data.user.username);
             return data.data.user;
         } catch (error) {
-            console.log('❌ Get current user failed:', error.response?.status);
             return rejectWithValue(error.response?.data?.message || 'Failed to get user');
         }
     }
@@ -79,7 +71,6 @@ const authSlice = createSlice({
                 state.error = null;
             })
             .addCase(register.fulfilled, (state, action) => {
-                console.log('✅ Redux: User registered');
                 state.loading = false;
                 state.user = action.payload;
                 state.isAuthenticated = true;
@@ -93,7 +84,6 @@ const authSlice = createSlice({
                 state.error = null;
             })
             .addCase(login.fulfilled, (state, action) => {
-                console.log('✅ Redux: User logged in');
                 state.loading = false;
                 state.user = action.payload;
                 state.isAuthenticated = true;
@@ -103,17 +93,14 @@ const authSlice = createSlice({
                 state.error = action.payload;
             })
             .addCase(logout.fulfilled, (state) => {
-                console.log('✅ Redux: User logged out');
                 state.user = null;
                 state.isAuthenticated = false;
             })
             .addCase(getCurrentUser.fulfilled, (state, action) => {
-                console.log('✅ Redux: Current user set');
                 state.user = action.payload;
                 state.isAuthenticated = true;
             })
             .addCase(getCurrentUser.rejected, (state) => {
-                console.log('❌ Redux: Auth check failed');
                 state.user = null;
                 state.isAuthenticated = false;
             });

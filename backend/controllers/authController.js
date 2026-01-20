@@ -141,7 +141,6 @@ export const logout = catchAsync(async (req, res, next) => {
 });
 
 export const getMe = catchAsync(async (req, res, next) => {
-  
   res.json({
     status: 'success',
     data: {
